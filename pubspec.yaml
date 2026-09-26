@@ -63,6 +63,18 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
+# `package:sqlite3` (pulled in by sqflite_common_ffi) normally downloads a
+# pre-compiled library from GitHub releases at build time. We point it at the
+# SQLite that ships with the operating system instead: it removes a build-time
+# network dependency, and both of our targets provide a recent enough SQLite
+# (macOS ships libsqlite3.dylib, Android builds use sqflite's platform channel
+# and never touch this library at all).
+# Remove this block to go back to the bundled, pinned SQLite build.
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
+
 # The following section is specific to Flutter packages.
 flutter:
   # Generates lib/l10n/generated/app_localizations.dart from l10n.yaml.

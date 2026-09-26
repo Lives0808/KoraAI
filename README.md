@@ -77,6 +77,11 @@ flutter build apk --release          # → build/app/outputs/flutter-apk/app-rel
 flutter build macos --release        # → build/macos/Build/Products/Release/KoraAI.app
 ```
 
+> **关于 SQLite**：`pubspec.yaml` 里的 `hooks.user_defines.sqlite3.source: system`
+> 让 `package:sqlite3` 使用系统自带的 SQLite，而不是在构建时从 GitHub Releases
+> 下载预编译动态库。Android 走 sqflite 的原生通道，桌面端用 macOS 自带的
+> `libsqlite3.dylib`，两者都够用。想换回官方锁定版本删掉这段即可。
+
 ### 首次使用
 
 1. 打开 App → **设置**
@@ -159,6 +164,18 @@ flutter test             # 单元测试：设置归一化、中文分词、切�
 ```
 
 CI 见 `.github/workflows/ci.yml`：每次 push 跑 analyze + test + 构建 APK。
+
+## 第三方依赖与许可
+
+| 依赖 | 用途 | 许可 |
+|---|---|---|
+| flutter / sqflite / provider / http / file_picker / archive / xml | 基础能力 | BSD / MIT / Apache-2.0 |
+| flutter_markdown_plus | 渲染 Markdown 回答 | BSD-3-Clause |
+| **syncfusion_flutter_pdf** | 提取 PDF 文本 | ⚠️ Syncfusion 商业许可，个人与小团队可免费申请 Community License |
+
+Syncfusion 的 PDF 库是纯 Dart 实现（不需要原生依赖，这是选它的原因），但它**不是**开源许可。
+如果这个项目要商用且不符合其免费条件，可以把 `lib/data/ingestion/text_extractor.dart`
+里的 `_extractPdf` 换成 `pdfx`（Apache-2.0，但需要各平台的原生 pdfium 依赖）。
 
 ## 已知限制
 
