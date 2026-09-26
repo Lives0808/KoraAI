@@ -168,12 +168,17 @@ class Retriever {
 }
 
 /// Cosine similarity of two equal-length vectors.
+///
+/// Returns 0 for vectors with different dimensions instead of comparing a
+/// prefix: that can only happen when stored vectors come from a different
+/// embedding model, and comparing prefixes would silently produce garbage
+/// rankings.
 double cosineSimilarity(Float32List a, Float32List b) {
-  final length = math.min(a.length, b.length);
+  if (a.length != b.length) return 0;
   var dot = 0.0;
   var normA = 0.0;
   var normB = 0.0;
-  for (var i = 0; i < length; i++) {
+  for (var i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
     normA += a[i] * a[i];
     normB += b[i] * b[i];

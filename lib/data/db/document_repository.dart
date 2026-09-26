@@ -88,7 +88,7 @@ class DocumentRepository {
       for (final chunk in chunks) {
         batch.update(
           'chunks',
-          <String, Object?>{'embedding': chunk.embedding?.buffer.asUint8List()},
+          <String, Object?>{'embedding': chunk.embeddingBytes},
           where: 'id = ?',
           whereArgs: <Object?>[chunk.id],
         );
