@@ -32,33 +32,7 @@ class _HomeShellState extends State<HomeShell> {
       SettingsScreen(),
     ];
 
-    final destinations = <NavigationRailDestination>[
-      NavigationRailDestination(
-        icon: const Icon(Icons.forum_outlined),
-        selectedIcon: const Icon(Icons.forum),
-        label: Text(l10n.navChat),
-      ),
-      NavigationRailDestination(
-        icon: const Icon(Icons.description_outlined),
-        selectedIcon: const Icon(Icons.description),
-        label: Text(l10n.navDocuments),
-      ),
-      NavigationRailDestination(
-        icon: const Icon(Icons.settings_outlined),
-        selectedIcon: const Icon(Icons.settings),
-        label: Text(l10n.navSettings),
-      ),
-    ];
-
-    final body = Column(
-      children: <Widget>[
-        if (needsSetup && _index != 2)
-          _SetupBanner(onTap: () => setState(() => _index = 2)),
-        Expanded(
-          child: IndexedStack(index: _index, children: pages),
-        ),
-      ],
-    );
+    final body = IndexedStack(index: _index, children: pages);
 
     if (!wide) {
       return Scaffold(
@@ -78,14 +52,44 @@ class _HomeShellState extends State<HomeShell> {
               label: l10n.navDocuments,
             ),
             NavigationDestination(
-              icon: const Icon(Icons.settings_outlined),
-              selectedIcon: const Icon(Icons.settings),
+              icon: _Badged(
+                show: needsSetup,
+                child: const Icon(Icons.settings_outlined),
+              ),
+              selectedIcon: _Badged(
+                show: needsSetup,
+                child: const Icon(Icons.settings),
+              ),
               label: l10n.navSettings,
             ),
           ],
         ),
       );
     }
+
+    final destinations = <NavigationRailDestination>[
+      NavigationRailDestination(
+        icon: const Icon(Icons.forum_outlined),
+        selectedIcon: const Icon(Icons.forum),
+        label: Text(l10n.navChat),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.description_outlined),
+        selectedIcon: const Icon(Icons.description),
+        label: Text(l10n.navDocuments),
+      ),
+      NavigationRailDestination(
+        icon: _Badged(
+          show: needsSetup,
+          child: const Icon(Icons.settings_outlined),
+        ),
+        selectedIcon: _Badged(
+          show: needsSetup,
+          child: const Icon(Icons.settings),
+        ),
+        label: Text(l10n.navSettings),
+      ),
+    ];
 
     return Scaffold(
       body: Row(
@@ -104,6 +108,23 @@ class _HomeShellState extends State<HomeShell> {
           Expanded(child: body),
         ],
       ),
+    );
+  }
+}
+
+/// Marks a navigation destination with a hint dot until the app is configured.
+class _Badged extends StatelessWidget {
+  const _Badged({required this.show, required this.child});
+
+  final bool show;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!show) return child;
+    return Badge(
+      backgroundColor: Theme.of(context).colorScheme.tertiary,
+      child: child,
     );
   }
 }
@@ -132,42 +153,6 @@ class _BrandMark extends StatelessWidget {
           color: scheme.onPrimary,
           fontWeight: FontWeight.w700,
           fontSize: 20,
-        ),
-      ),
-    );
-  }
-}
-
-class _SetupBanner extends StatelessWidget {
-  const _SetupBanner({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.tertiaryContainer,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: <Widget>[
-              Icon(Icons.key_outlined,
-                  size: 18, color: scheme.onTertiaryContainer),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.chatNotConfigured,
-                  style: TextStyle(color: scheme.onTertiaryContainer),
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 18, color: scheme.onTertiaryContainer),
-            ],
-          ),
         ),
       ),
     );

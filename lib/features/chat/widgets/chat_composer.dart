@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -135,25 +136,41 @@ class _ChatComposerState extends State<ChatComposer> {
                 ),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Row(
-                children: <Widget>[
-                  Icon(Icons.keyboard_command_key,
-                      size: 13, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: 4),
-                  Text(
-                    '+ Enter',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+            if (_isDesktop)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: <Widget>[
+                    Text(
+                      defaultTargetPlatform == TargetPlatform.macOS
+                          ? '⌘ + Enter'
+                          : 'Ctrl + Enter',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontFeatures: const <FontFeature>[
+                          FontFeature.tabularFigures(),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Text(
+                      '/ send',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
+
+  /// Keyboard shortcuts only make sense where there is a keyboard.
+  static bool get _isDesktop =>
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
 }
