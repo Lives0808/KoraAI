@@ -85,6 +85,33 @@ flutter build macos --release        # → build/macos/Build/Products/Release/Ko
 > 在 Linux 上开发时需要 `libsqlite3-dev`（提供 `libsqlite3.so` 符号链接）。
 > 本项目只启用了 Android 与 macOS 两个平台，其他平台需要自己 `flutter create --platforms=...`。
 
+### 发布新版本
+
+```bash
+# 1. 改版本号
+#    pubspec.yaml 里的 version: 1.0.0+1  →  1.0.1+2
+
+# 2. 构建
+flutter build apk --release
+flutter build macos --release
+
+# 3. 打包 macOS 产物
+cd build/macos/Build/Products/Release
+ditto -c -k --keepParent KoraAI.app KoraAI-1.0.1-macos.zip
+cd -
+
+# 4. 打 tag 并发 Release
+git tag v1.0.1 && git push origin v1.0.1
+gh release create v1.0.1 \
+  --title "KoraAI v1.0.1" \
+  --notes-file CHANGELOG.md \
+  build/app/outputs/flutter-apk/app-release.apk \
+  build/macos/Build/Products/Release/KoraAI-1.0.1-macos.zip
+```
+
+macOS 版第一次打开会被 Gatekeeper 拦（未签名）：右键 →「打开」，或
+`xattr -dr com.apple.quarantine KoraAI.app`。
+
 ### 首次使用
 
 1. 打开 App → **设置**
