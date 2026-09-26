@@ -81,6 +81,9 @@ flutter build macos --release        # → build/macos/Build/Products/Release/Ko
 > 让 `package:sqlite3` 使用系统自带的 SQLite，而不是在构建时从 GitHub Releases
 > 下载预编译动态库。Android 走 sqflite 的原生通道，桌面端用 macOS 自带的
 > `libsqlite3.dylib`，两者都够用。想换回官方锁定版本删掉这段即可。
+>
+> 在 Linux 上开发时需要 `libsqlite3-dev`（提供 `libsqlite3.so` 符号链接）。
+> 本项目只启用了 Android 与 macOS 两个平台，其他平台需要自己 `flutter create --platforms=...`。
 
 ### 首次使用
 
