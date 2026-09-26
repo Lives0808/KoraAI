@@ -1,0 +1,118 @@
+{
+  "@@locale": "zh",
+  "appTitle": "KoraAI",
+  "appTagline": "聊天与文档问答，接入你自己的模型服务。",
+
+  "navChat": "聊天",
+  "navDocuments": "文档",
+  "navSettings": "设置",
+
+  "commonCancel": "取消",
+  "commonDelete": "删除",
+  "commonClose": "关闭",
+  "commonRetry": "重试",
+  "commonSave": "保存",
+  "commonAdd": "添加",
+  "commonCopy": "复制",
+  "commonCopied": "已复制到剪贴板",
+  "commonSearch": "搜索",
+
+  "chatNewChat": "新建对话",
+  "chatHistory": "历史记录",
+  "chatEmptyTitle": "问 KoraAI 任何问题",
+  "chatEmptyBody": "直接输入问题，或先导入文档，让回答基于你自己的资料。",
+  "chatInputHint": "发消息给 KoraAI…",
+  "chatSend": "发送",
+  "chatStop": "停止",
+  "chatRegenerate": "重新生成",
+  "chatThinking": "思考中…",
+  "chatSources": "引用来源",
+  "chatSourceCount": "{count, plural, =0{无引用} other{{count} 条引用}}",
+  "@chatSourceCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "chatAttachDocuments": "文档",
+  "chatAttachedCount": "{count, plural, =0{未关联文档} other{已关联 {count} 个文档}}",
+  "@chatAttachedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "chatAttachHint": "关联文档后，回答会基于你的资料生成。",
+  "chatNoDocuments": "还没有文档，请先在「文档」页导入。",
+  "chatDeleteTitle": "删除对话？",
+  "chatDeleteBody": "该对话及其全部消息将被永久删除。",
+  "chatRename": "重命名",
+  "chatRenameTitle": "对话标题",
+  "chatUntitled": "新对话",
+  "chatNotConfigured": "请先在「设置」里配置接口地址和密钥。",
+
+  "docsTitle": "文档",
+  "docsImport": "导入文件",
+  "docsPaste": "粘贴文本",
+  "docsEmpty": "还没有文档",
+  "docsEmptyBody": "支持 PDF、DOCX、Markdown、CSV 及代码文件，全部保存在本机。",
+  "docsChunks": "{count, plural, other{{count} 个片段}}",
+  "@docsChunks": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "docsStatusPending": "等待中",
+  "docsStatusIndexing": "索引中…",
+  "docsStatusReady": "就绪",
+  "docsStatusFailed": "失败",
+  "docsIndexed": "已向量化",
+  "docsKeywordOnly": "仅关键词索引",
+  "docsReindex": "重新索引",
+  "docsEmbed": "生成向量",
+  "docsDeleteTitle": "删除文档？",
+  "docsDeleteBody": "将从本机移除该文档及其索引，不会影响原始文件。",
+  "docsPasteTitle": "粘贴文本",
+  "docsPasteNameLabel": "标题",
+  "docsPasteNameHint": "例如：会议记录",
+  "docsPasteBodyLabel": "正文",
+  "docsPasteBodyHint": "粘贴你想提问的任意文本…",
+  "docsImporting": "索引中…",
+  "docsAttachToChat": "用于聊天",
+  "docsDetachFromChat": "从聊天移除",
+  "docsFileMissing": "源文件不可用",
+
+  "settingsTitle": "设置",
+  "settingsEndpointSection": "模型接口",
+  "settingsBaseUrl": "接口地址",
+  "settingsBaseUrlHelp": "兼容 OpenAI 协议。例如：https://api.openai.com/v1、https://api.deepseek.com/v1、http://localhost:11434/v1",
+  "settingsApiKey": "API Key",
+  "settingsApiKeyHelp": "本地服务（Ollama、LM Studio 等）可留空。",
+  "settingsChatModel": "对话模型",
+  "settingsEmbeddingModel": "向量模型",
+  "settingsEmbeddingHelp": "可选。留空时文档检索会退回离线关键词索引。",
+  "settingsRetrievalSection": "检索",
+  "settingsTopK": "每次回答引用的片段数",
+  "settingsUseVector": "存在向量时启用向量检索",
+  "settingsPromptSection": "提示词",
+  "settingsSystemPrompt": "系统提示词",
+  "settingsTemperature": "随机性（temperature）",
+  "settingsConnectionSection": "连接",
+  "settingsTestConnection": "测试连接",
+  "settingsTesting": "测试中…",
+  "settingsTestSuccess": "连接正常。",
+  "settingsLanguage": "界面语言",
+  "settingsLanguageSystem": "跟随系统",
+  "settingsDataSection": "本地数据",
+  "settingsResetData": "清空本地数据",
+  "settingsResetDataBody": "删除本机保存的全部对话与文档索引。",
+  "settingsAbout": "关于",
+  "settingsVersion": "版本 {version}",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "settingsPresetOpenAi": "OpenAI",
+  "settingsPresetDeepSeek": "DeepSeek",
+  "settingsPresetOllama": "Ollama（本地）",
+  "settingsPresets": "快速预设"
+}

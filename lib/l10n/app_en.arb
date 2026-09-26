@@ -1,0 +1,118 @@
+{
+  "@@locale": "en",
+  "appTitle": "KoraAI",
+  "appTagline": "Chat and document Q&A, powered by your own model endpoint.",
+
+  "navChat": "Chat",
+  "navDocuments": "Documents",
+  "navSettings": "Settings",
+
+  "commonCancel": "Cancel",
+  "commonDelete": "Delete",
+  "commonClose": "Close",
+  "commonRetry": "Retry",
+  "commonSave": "Save",
+  "commonAdd": "Add",
+  "commonCopy": "Copy",
+  "commonCopied": "Copied to clipboard",
+  "commonSearch": "Search",
+
+  "chatNewChat": "New chat",
+  "chatHistory": "History",
+  "chatEmptyTitle": "Ask KoraAI anything",
+  "chatEmptyBody": "Start typing, or attach a document so answers are grounded in your own files.",
+  "chatInputHint": "Message KoraAI…",
+  "chatSend": "Send",
+  "chatStop": "Stop",
+  "chatRegenerate": "Regenerate",
+  "chatThinking": "Thinking…",
+  "chatSources": "Sources",
+  "chatSourceCount": "{count, plural, =0{No sources} =1{1 source} other{{count} sources}}",
+  "@chatSourceCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "chatAttachDocuments": "Documents",
+  "chatAttachedCount": "{count, plural, =0{No documents attached} =1{1 document attached} other{{count} documents attached}}",
+  "@chatAttachedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "chatAttachHint": "Attach documents to ground answers in your own files.",
+  "chatNoDocuments": "No documents yet. Import one in the Documents tab.",
+  "chatDeleteTitle": "Delete conversation?",
+  "chatDeleteBody": "This permanently removes the conversation and its messages.",
+  "chatRename": "Rename",
+  "chatRenameTitle": "Conversation title",
+  "chatUntitled": "New conversation",
+  "chatNotConfigured": "Add your API endpoint in Settings to start chatting.",
+
+  "docsTitle": "Documents",
+  "docsImport": "Import files",
+  "docsPaste": "Paste text",
+  "docsEmpty": "No documents yet",
+  "docsEmptyBody": "Import PDF, DOCX, Markdown, CSV or source files — everything stays on this device.",
+  "docsChunks": "{count, plural, =1{1 chunk} other{{count} chunks}}",
+  "@docsChunks": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "docsStatusPending": "Pending",
+  "docsStatusIndexing": "Indexing…",
+  "docsStatusReady": "Ready",
+  "docsStatusFailed": "Failed",
+  "docsIndexed": "Embedded",
+  "docsKeywordOnly": "Keyword index only",
+  "docsReindex": "Re-index",
+  "docsEmbed": "Build embeddings",
+  "docsDeleteTitle": "Delete document?",
+  "docsDeleteBody": "The document and its index are removed from this device. The original file is not touched.",
+  "docsPasteTitle": "Paste text",
+  "docsPasteNameLabel": "Title",
+  "docsPasteNameHint": "e.g. Meeting notes",
+  "docsPasteBodyLabel": "Content",
+  "docsPasteBodyHint": "Paste any text you want to be able to ask questions about…",
+  "docsImporting": "Indexing…",
+  "docsAttachToChat": "Use in chat",
+  "docsDetachFromChat": "Remove from chat",
+  "docsFileMissing": "Source file unavailable",
+
+  "settingsTitle": "Settings",
+  "settingsEndpointSection": "Model endpoint",
+  "settingsBaseUrl": "Base URL",
+  "settingsBaseUrlHelp": "OpenAI-compatible. Examples: https://api.openai.com/v1, https://api.deepseek.com/v1, http://localhost:11434/v1",
+  "settingsApiKey": "API key",
+  "settingsApiKeyHelp": "Leave empty for local servers such as Ollama or LM Studio.",
+  "settingsChatModel": "Chat model",
+  "settingsEmbeddingModel": "Embedding model",
+  "settingsEmbeddingHelp": "Optional. When empty, document search falls back to the offline keyword index.",
+  "settingsRetrievalSection": "Retrieval",
+  "settingsTopK": "Excerpts per answer",
+  "settingsUseVector": "Use vector search when embeddings exist",
+  "settingsPromptSection": "Prompt",
+  "settingsSystemPrompt": "System prompt",
+  "settingsTemperature": "Temperature",
+  "settingsConnectionSection": "Connection",
+  "settingsTestConnection": "Test connection",
+  "settingsTesting": "Testing…",
+  "settingsTestSuccess": "Connection works.",
+  "settingsLanguage": "Language",
+  "settingsLanguageSystem": "System default",
+  "settingsDataSection": "Local data",
+  "settingsResetData": "Delete all local data",
+  "settingsResetDataBody": "Removes every conversation and document index stored on this device.",
+  "settingsAbout": "About",
+  "settingsVersion": "Version {version}",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "settingsPresetOpenAi": "OpenAI",
+  "settingsPresetDeepSeek": "DeepSeek",
+  "settingsPresetOllama": "Ollama (local)",
+  "settingsPresets": "Quick presets"
+}
