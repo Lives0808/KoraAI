@@ -40,7 +40,8 @@ class ChatController extends ChangeNotifier {
   String? _error;
 
   StreamSubscription<String>? _subscription;
-  Completer<void>? _activeRun;
+  _ActiveRun? _activeRun;
+  bool _disposed = false;
   final Stopwatch _notifyClock = Stopwatch();
 
   List<Conversation> get conversations => _conversations;
@@ -52,6 +53,12 @@ class ChatController extends ChangeNotifier {
   List<String> get attachedDocumentIds =>
       _active?.documentIds ?? const <String>[];
 
+  /// `notifyListeners` that tolerates a stream finishing after `dispose`.
+  void _notifyListeners() {
+    if (_disposed) return;
+    notifyListeners();
+  }
+
   /// Called by the provider wiring whenever settings change.
   void bindSettings(AppSettings settings) {
     _settings = settings;
@@ -59,7 +66,7 @@ class ChatController extends ChangeNotifier {
 
   Future<void> load() async {
     _loading = true;
-    notifyListeners();
+    _notifyListeners();
     _conversations = await _repository.list();
     _loading = false;
     final current = _active;
@@ -69,18 +76,22 @@ class ChatController extends ChangeNotifier {
           .toList(growable: false);
       if (refreshed.isNotEmpty) _active = refreshed.first;
     }
-    notifyListeners();
+    _notifyListeners();
   }
 
   Future<Conversation> startNewConversation() async {
     await stop();
+    return _createConversation();
+  }
+
+  Future<Conversation> _createConversation() async {
     final conversation = await _repository.create();
     _conversations = <Conversation>[conversation, ..._conversations];
     _active = conversation;
     _messages = const <ChatMessage>[];
     _error = null;
 
-    notifyListeners();
+    _notifyListeners();
     return conversation;
   }
 
@@ -92,19 +103,24 @@ class ChatController extends ChangeNotifier {
     _active = match.first;
     _messages = await _repository.messages(id);
     _error = null;
-    notifyListeners();
+    _notifyListeners();
   }
 
   Future<void> deleteConversation(String id) async {
-    await _repository.delete(id);
+    final wasActive = _active?.id == id;
+    // Drop it from the in-memory state before any await so a stream that is
+    // still unwinding cannot persist a reply into the deleted conversation.
     _conversations = _conversations
         .where((conversation) => conversation.id != id)
         .toList(growable: false);
-    if (_active?.id == id) {
+    if (wasActive) {
       _active = null;
       _messages = const <ChatMessage>[];
     }
-    notifyListeners();
+    _notifyListeners();
+    if (wasActive) await stop();
+    await _repository.delete(id);
+    _notifyListeners();
   }
 
   Future<void> renameConversation(String id, String title) async {
@@ -116,7 +132,7 @@ class ChatController extends ChangeNotifier {
             : conversation)
         .toList(growable: false);
     if (_active?.id == id) _active = _active!.copyWith(title: trimmed);
-    notifyListeners();
+    _notifyListeners();
     final match = _conversations.where((conversation) => conversation.id == id);
     if (match.isNotEmpty) await _repository.save(match.first);
   }
@@ -135,59 +151,96 @@ class ChatController extends ChangeNotifier {
     _conversations = _conversations
         .map((item) => item.id == conversation.id ? conversation : item)
         .toList(growable: false);
-    notifyListeners();
+    _notifyListeners();
     await _repository.save(conversation);
   }
 
   Future<void> send(String text) async {
     final content = text.trim();
-    if (content.isEmpty || _isStreaming) return;
+    if (content.isEmpty) return;
+    await _startTurn((run) async {
+      var conversation = _active ?? await _createConversation();
+      if (run.cancelled) return;
 
-    final conversation = _active ?? await startNewConversation();
-    final userMessage = ChatMessage(
-      id: newId(),
-      conversationId: conversation.id,
-      role: MessageRole.user,
-      content: content,
-      createdAt: DateTime.now(),
-    );
-    _messages = <ChatMessage>[..._messages, userMessage];
-    _error = null;
-    notifyListeners();
-    await _repository.insertMessage(userMessage);
-
-    final isFirst = conversation.title.trim().isEmpty;
-    await _repository.touch(
-      conversation.id,
-      title: isFirst ? _deriveTitle(content) : null,
-    );
-    if (isFirst) {
-      final updated = conversation.copyWith(
-        title: _deriveTitle(content),
-        updatedAt: DateTime.now(),
+      final userMessage = ChatMessage(
+        id: newId(),
+        conversationId: conversation.id,
+        role: MessageRole.user,
+        content: content,
+        createdAt: DateTime.now(),
       );
-      _active = updated;
-      _conversations = _conversations
-          .map((item) => item.id == updated.id ? updated : item)
-          .toList(growable: false);
-    }
+      _messages = <ChatMessage>[..._messages, userMessage];
+      _error = null;
+      _notifyListeners();
+      await _repository.insertMessage(userMessage);
+      if (run.cancelled) return;
 
-    await _runAssistantTurn();
+      final isFirst = conversation.title.trim().isEmpty;
+      await _repository.touch(
+        conversation.id,
+        title: isFirst ? _deriveTitle(content) : null,
+      );
+      if (run.cancelled) return;
+      if (isFirst) {
+        conversation = conversation.copyWith(
+          title: _deriveTitle(content),
+          updatedAt: DateTime.now(),
+        );
+        _active = conversation;
+        _conversations = _conversations
+            .map((item) => item.id == conversation.id ? conversation : item)
+            .toList(growable: false);
+      }
+
+      await _runAssistantTurn(run, conversation);
+    });
+  }
+
+  /// Runs one assistant turn, creating the run token synchronously.
+  ///
+  /// Creating the token before the first `await` means a [stop] that lands
+  /// while retrieval is still running (before any HTTP stream exists) still
+  /// cancels the turn, and concurrent [send] calls are ignored.
+  Future<void> _startTurn(Future<void> Function(_ActiveRun run) body) async {
+    if (_isStreaming) return;
+    final run = _ActiveRun();
+    _activeRun = run;
+    _isStreaming = true;
+    _error = null;
+    _notifyListeners();
+    try {
+      await body(run);
+    } finally {
+      if (identical(_activeRun, run)) {
+        _activeRun = null;
+        _subscription = null;
+        _isStreaming = false;
+        _notifyListeners();
+      }
+    }
   }
 
   Future<void> regenerate() async {
-    if (_isStreaming || _messages.isEmpty) return;
+    if (_messages.isEmpty) return;
     final last = _messages.last;
     if (last.isUser) return;
-    await _repository.deleteMessage(last.id);
-    _messages = _messages.sublist(0, _messages.length - 1);
-    notifyListeners();
-    await _runAssistantTurn();
-  }
-
-  Future<void> _runAssistantTurn() async {
     final conversation = _active;
     if (conversation == null) return;
+    await _startTurn((run) async {
+      await _repository.deleteMessage(last.id);
+      if (run.cancelled) return;
+      _messages = _messages.sublist(0, _messages.length - 1);
+      _error = null;
+      _notifyListeners();
+      await _runAssistantTurn(run, conversation);
+    });
+  }
+
+  Future<void> _runAssistantTurn(
+    _ActiveRun run,
+    Conversation conversation,
+  ) async {
+    if (_messages.isEmpty) return;
     final lastUser = _messages.lastWhere(
       (message) => message.isUser,
       orElse: () => _messages.last,
@@ -207,8 +260,7 @@ class ChatController extends ChangeNotifier {
       );
       _messages = <ChatMessage>[..._messages, notice];
       _error = notice.error;
-      _isStreaming = false;
-      notifyListeners();
+      _notifyListeners();
       return;
     }
 
@@ -221,9 +273,8 @@ class ChatController extends ChangeNotifier {
       isStreaming: true,
     );
     _messages = <ChatMessage>[..._messages, placeholder];
-    _isStreaming = true;
     _error = null;
-    notifyListeners();
+    _notifyListeners();
 
     final buffer = StringBuffer();
     var sources = const <MessageSource>[];
@@ -231,18 +282,25 @@ class ChatController extends ChangeNotifier {
 
     try {
       final hits = await _retrieve(conversation, lastUser.content);
+      if (run.cancelled) {
+        _removeMessage(placeholder.id);
+        return;
+      }
       sources = hits.map(_toSource).toList(growable: false);
       final turns = _buildTurns(conversation, hits);
-      await _streamInto(buffer, placeholder.id, turns, sources);
+      await _streamInto(run, buffer, placeholder.id, turns, sources);
     } on AiException catch (error) {
       failure = error.message;
     } on Object catch (error) {
       failure = '$error';
     }
 
-    _isStreaming = false;
-    _subscription = null;
-    _activeRun = null;
+    if (_disposed) return;
+
+    if (run.cancelled && buffer.isEmpty) {
+      _removeMessage(placeholder.id);
+      return;
+    }
 
     final finished = placeholder.copyWith(
       content: buffer.toString(),
@@ -251,31 +309,34 @@ class ChatController extends ChangeNotifier {
       error: failure,
     );
     _replaceMessage(finished);
-    if (failure != null) _error = failure;
-    notifyListeners();
+    if (failure != null && identical(_activeRun, run)) _error = failure;
+    _notifyListeners();
 
-    if (buffer.isNotEmpty) {
-      await _repository.insertMessage(finished);
+    final stillOpen =
+        _conversations.any((item) => item.id == conversation.id);
+    if (buffer.isNotEmpty && stillOpen) {
+      await _repository.insertFinishedMessage(finished);
       await _repository.touch(conversation.id);
     }
   }
 
   Future<void> _streamInto(
+    _ActiveRun run,
     StringBuffer buffer,
     String messageId,
     List<ChatTurn> turns,
     List<MessageSource> sources,
   ) async {
-    final completer = Completer<void>();
-    _activeRun = completer;
+    if (run.cancelled || _disposed) return;
     _notifyClock
       ..reset()
       ..start();
 
-    _subscription = _client
+    final subscription = _client
         .streamChat(settings: _settings, turns: turns)
         .listen(
       (delta) {
+        if (run.cancelled || _disposed) return;
         buffer.write(delta);
         _replaceMessage(
           _currentAssistant(messageId).copyWith(
@@ -286,35 +347,52 @@ class ChatController extends ChangeNotifier {
         );
         if (_notifyClock.elapsed > _notifyInterval) {
           _notifyClock.reset();
-          notifyListeners();
+          _notifyListeners();
         }
       },
       onError: (Object error) {
-        if (!completer.isCompleted) completer.completeError(error);
+        if (!run.completer.isCompleted) run.completer.completeError(error);
       },
       onDone: () {
-        if (!completer.isCompleted) completer.complete();
+        if (!run.completer.isCompleted) run.completer.complete();
       },
       cancelOnError: true,
     );
+    _subscription = subscription;
 
-    await completer.future;
+    await run.completer.future;
   }
 
   Future<void> stop() async {
-    final subscription = _subscription;
-    if (subscription == null) return;
-    _subscription = null;
-    await subscription.cancel();
     final run = _activeRun;
-    if (run != null && !run.isCompleted) run.complete();
+    if (run == null) return;
+    run.cancelled = true;
+    final subscription = _subscription;
+    _subscription = null;
+    if (subscription != null) await subscription.cancel();
+    if (!run.completer.isCompleted) run.completer.complete();
     _activeRun = null;
     _isStreaming = false;
     _messages = _messages
+        .where((message) => !_isEmptyAssistant(message))
         .map((message) =>
             message.isStreaming ? message.copyWith(isStreaming: false) : message)
         .toList(growable: false);
-    notifyListeners();
+    _notifyListeners();
+  }
+
+  /// Placeholders for turns that were cancelled before producing anything.
+  bool _isEmptyAssistant(ChatMessage message) =>
+      message.role == MessageRole.assistant &&
+      message.content.isEmpty &&
+      message.error == null &&
+      message.sources.isEmpty;
+
+  void _removeMessage(String id) {
+    _messages = _messages
+        .where((message) => message.id != id)
+        .toList(growable: false);
+    _notifyListeners();
   }
 
   Future<List<RetrievalHit>> _retrieve(
@@ -428,7 +506,21 @@ class ChatController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    final run = _activeRun;
+    _activeRun = null;
     _subscription?.cancel();
+    _subscription = null;
+    if (run != null && !run.completer.isCompleted) run.completer.complete();
     super.dispose();
   }
+}
+
+/// State for one in-flight assistant turn.
+///
+/// A turn can be cancelled at any point, including while retrieval is still
+/// running and no HTTP stream subscription exists yet.
+class _ActiveRun {
+  final Completer<void> completer = Completer<void>();
+  bool cancelled = false;
 }
