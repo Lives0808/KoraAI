@@ -96,24 +96,38 @@ flutter build macos --release        # → build/macos/Build/Products/Release/Ko
 
 ```bash
 # 1. 改版本号
-#    pubspec.yaml 里的 version: 1.0.0+1  →  1.0.1+2
+#    pubspec.yaml 里的 version: 1.0.0+1  →  1.0.2+3
+#    lib/features/settings/settings_screen.dart 里的 kAppVersion
 
-# 2. 构建
+# 2. 构建 Android
 flutter build apk --release
-flutter build macos --release
 
-# 3. 打包 macOS 产物
-cd build/macos/Build/Products/Release
-ditto -c -k --keepParent KoraAI.app KoraAI-1.0.1-macos.zip
-cd -
-
-# 4. 打 tag 并发 Release
-git tag v1.0.1 && git push origin v1.0.1
-gh release create v1.0.1 \
-  --title "KoraAI v1.0.1" \
+# 3. 打 tag 并发 Release
+git tag v1.0.2 && git push origin v1.0.2
+gh release create v1.0.2 \
+  --title "KoraAI v1.0.2" \
   --notes-file CHANGELOG.md \
-  build/app/outputs/flutter-apk/app-release.apk \
-  build/macos/Build/Products/Release/KoraAI-1.0.1-macos.zip
+  build/app/outputs/flutter-apk/app-release.apk
+```
+
+### 不用本地 Xcode 也能出 macOS 版
+
+macOS 版需要完整 Xcode（App Store 上 10GB+）。如果你机器上没装，直接让 GitHub
+的 macOS runner 帮你编 —— 它自带 Xcode：
+
+```bash
+gh workflow run "macOS release" -f tag=v1.0.2
+```
+
+工作流会 `flutter analyze` + `flutter test` + `flutter build macos --release`，
+然后把 `KoraAI-1.0.2-macos.zip` 和对应的 `.sha256` 传到那个 Release 上。
+
+本地有 Xcode 的话也可以自己编：
+
+```bash
+flutter build macos --release
+cd build/macos/Build/Products/Release
+ditto -c -k --keepParent KoraAI.app KoraAI-1.0.2-macos.zip
 ```
 
 macOS 版第一次打开会被 Gatekeeper 拦（未签名）：右键 →「打开」，或
