@@ -1,4 +1,6 @@
 
+import 'package:sqflite/sqflite.dart';
+
 import '../../core/utils/ids.dart';
 import '../models/chat_message.dart';
 import '../models/conversation.dart';
@@ -84,6 +86,18 @@ class ConversationRepository {
   Future<void> deleteMessage(String id) async {
     final db = await _database.database;
     await db.delete('messages', where: 'id = ?', whereArgs: <Object?>[id]);
+  }
+
+  /// Inserts a finished assistant turn, skipping the write when its
+  /// conversation was deleted while the answer was still streaming.
+  Future<void> insertFinishedMessage(ChatMessage message) async {
+    final db = await _database.database;
+    try {
+      await db.insert('messages', message.toRow());
+    } on DatabaseException catch (error) {
+      // 787 == SQLITE_CONSTRAINT_FOREIGNKEY: the parent conversation is gone.
+      if (error.getResultCode() != 787) rethrow;
+    }
   }
 
   Future<void> deleteMessagesFrom(String conversationId, DateTime from) async {

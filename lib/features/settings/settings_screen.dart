@@ -440,6 +440,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    await context.read<ChatController>().stop();
+    if (!mounted) return;
     await AppDatabase.instance.wipe();
     if (!mounted) return;
     await context.read<DocumentsController>().load();
