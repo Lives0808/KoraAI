@@ -17,15 +17,25 @@ class DocChunk {
   final int tokenEstimate;
   final Float32List? embedding;
 
-  Map<String, Object?> toRow() {
+  /// The embedding as raw bytes, honouring any view offset so a `Float32List`
+  /// view into a larger buffer never leaks the surrounding bytes.
+  Uint8List? get embeddingBytes {
     final values = embedding;
+    if (values == null) return null;
+    return values.buffer.asUint8List(
+      values.offsetInBytes,
+      values.lengthInBytes,
+    );
+  }
+
+  Map<String, Object?> toRow() {
     return <String, Object?>{
       'id': id,
       'document_id': documentId,
       'ordinal': ordinal,
       'content': content,
       'tokens': tokenEstimate,
-      'embedding': values?.buffer.asUint8List(),
+      'embedding': embeddingBytes,
     };
   }
 
@@ -33,10 +43,16 @@ class DocChunk {
     final blob = row['embedding'];
     Float32List? embedding;
     if (blob is Uint8List && blob.isNotEmpty) {
+      // `Float32List.view` requires a 4-byte aligned offset and a length that
+      // is a multiple of 4, which SQLite result buffers do not guarantee.
+      final aligned = blob.offsetInBytes % Float32List.bytesPerElement == 0 &&
+              blob.lengthInBytes % Float32List.bytesPerElement == 0
+          ? blob
+          : Uint8List.fromList(blob);
       embedding = Float32List.view(
-        blob.buffer,
-        blob.offsetInBytes,
-        blob.length ~/ Float32List.bytesPerElement,
+        aligned.buffer,
+        aligned.offsetInBytes,
+        aligned.lengthInBytes ~/ Float32List.bytesPerElement,
       );
     }
     return DocChunk(

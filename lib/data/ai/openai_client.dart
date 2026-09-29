@@ -141,22 +141,63 @@ class OpenAiClient {
       },
     );
     final data = response['data'];
-    if (data is! List) {
+    if (data is! List || data.isEmpty) {
       throw AiException('Unexpected embeddings response.',
           body: jsonEncode(response));
     }
-    final vectors = <Float32List>[];
+    // The API contract is one vector per input, matched by `index`.
+    // Some compatible servers omit the index or return items out of order,
+    // so fall back to the next free slot when it is missing or duplicated,
+    // and fail loudly when a vector is missing or malformed: silently
+    // skipping one would attach vectors to the wrong chunks.
+    final slots = List<Float32List?>.filled(inputs.length, null);
+    var nextFree = 0;
+    int? dimensions;
     for (final item in data) {
       if (item is! Map) continue;
       final raw = item['embedding'];
-      if (raw is! List) continue;
+      if (raw is! List || raw.isEmpty) continue;
       final vector = Float32List(raw.length);
       for (var i = 0; i < raw.length; i++) {
-        vector[i] = (raw[i] as num).toDouble();
+        final value = raw[i];
+        if (value is! num) {
+          throw AiException('Unexpected embeddings response.',
+              body: jsonEncode(response));
+        }
+        vector[i] = value.toDouble();
       }
-      vectors.add(vector);
+      if (dimensions == null) {
+        dimensions = vector.length;
+      } else if (vector.length != dimensions) {
+        throw AiException('Embedding vectors with inconsistent dimensions.',
+            body: jsonEncode(response));
+      }
+      final index = item['index'];
+      var slot = index is int ? index : nextFree;
+      if (slot < 0 || slot >= slots.length || slots[slot] != null) {
+        while (nextFree < slots.length && slots[nextFree] != null) {
+          nextFree++;
+        }
+        slot = nextFree;
+      }
+      if (slot < 0 || slot >= slots.length) {
+        throw AiException('Unexpected embeddings response.',
+            body: jsonEncode(response));
+      }
+      slots[slot] = vector;
+      while (nextFree < slots.length && slots[nextFree] != null) {
+        nextFree++;
+      }
     }
-    return vectors;
+    final missing = slots.where((vector) => vector == null).length;
+    if (missing > 0) {
+      throw AiException(
+        'The embeddings endpoint returned ${slots.length - missing} vectors '
+        'for ${inputs.length} inputs.',
+        body: jsonEncode(response),
+      );
+    }
+    return slots.cast<Float32List>();
   }
 
   /// Cheap "does my key work" call used by the settings screen.

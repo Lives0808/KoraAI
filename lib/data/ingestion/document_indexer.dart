@@ -157,12 +157,13 @@ class DocumentIndexer {
     if (chunks.isEmpty) return 0;
     final pending = chunks.where((chunk) => chunk.embedding == null).toList();
     if (pending.isEmpty) {
-      await _repository.upsert(document.copyWith(isEmbedded: true, error: null));
+      await _repository.upsert(document.copyWith(isEmbedded: true));
       return 0;
     }
 
     const batchSize = 24;
     var done = 0;
+    String? failure;
     try {
       for (var start = 0; start < pending.length; start += batchSize) {
         final end = (start + batchSize).clamp(0, pending.length);
@@ -171,9 +172,14 @@ class DocumentIndexer {
           settings: settings,
           inputs: batch.map((chunk) => chunk.content).toList(growable: false),
         );
-        final updated = <DocChunk>[];
-        for (var i = 0; i < batch.length && i < vectors.length; i++) {
-          updated.add(
+        if (vectors.length != batch.length) {
+          throw AiException(
+            'The embeddings endpoint returned ${vectors.length} vectors for '
+            '${batch.length} chunks.',
+          );
+        }
+        final updated = <DocChunk>[
+          for (var i = 0; i < batch.length; i++)
             DocChunk(
               id: batch[i].id,
               documentId: batch[i].documentId,
@@ -182,17 +188,24 @@ class DocumentIndexer {
               tokenEstimate: batch[i].tokenEstimate,
               embedding: vectors[i],
             ),
-          );
-        }
+        ];
         await _repository.saveEmbeddings(updated);
         done += updated.length;
         onProgress?.call(done / pending.length);
       }
-      await _repository.upsert(document.copyWith(isEmbedded: true, error: null));
     } on AiException catch (error) {
-      onError?.call('Embeddings failed (${error.message}). Keyword search still works.');
+      failure = 'Embeddings failed (${error.message}). Keyword search still works.';
+      onError?.call(failure);
     } on Object catch (error) {
-      onError?.call('Embeddings failed: $error');
+      failure = 'Embeddings failed: $error';
+      onError?.call(failure);
+    }
+    if (done == pending.length) {
+      await _repository.upsert(document.copyWith(isEmbedded: true));
+    } else if (failure == null) {
+      onError?.call(
+        'Embedded $done of ${pending.length} chunks. Keyword search still works.',
+      );
     }
     return done;
   }
