@@ -1,5 +1,12 @@
 # KoraAI
 
+[![Release](https://img.shields.io/github/v/release/Lives0808/KoraAI?style=flat-square&color=6366F1&label=release)](https://github.com/Lives0808/KoraAI/releases)
+[![License](https://img.shields.io/github/license/Lives0808/KoraAI?style=flat-square&color=6366F1&label=license)](LICENSE)
+[![Flutter](https://img.shields.io/badge/Flutter-6366F1?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-6366F1?style=flat-square&logo=dart&logoColor=white)](https://dart.dev)
+[![Android](https://img.shields.io/badge/Android-6366F1?style=flat-square&logo=android&logoColor=white)]
+[![macOS](https://img.shields.io/badge/macOS-6366F1?style=flat-square&logo=apple&logoColor=white)]
+
 **一套 Dart 代码，同时运行在 Android 和 macOS 桌面上的 AI 助手：聊天 + 文档问答（RAG）。**
 
 KoraAI 通过 **OpenAI 兼容协议** 对接任意模型服务 —— OpenAI、DeepSeek、Moonshot、通义千问、
