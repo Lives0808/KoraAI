@@ -27,7 +27,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _systemPrompt = TextEditingController();
 
   Timer? _debounce;
-  bool _initialised = false;
+  SettingsController? _controller;
+  bool _seeded = false;
   bool _obscureKey = true;
   bool _testing = false;
   String? _testResult;
@@ -36,13 +37,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_initialised) return;
-    _initialised = true;
-    _applyToFields(context.read<SettingsController>().settings);
+    final controller = context.read<SettingsController>();
+    if (!identical(controller, _controller)) {
+      _controller?.removeListener(_handleSettingsChanged);
+      _controller = controller..addListener(_handleSettingsChanged);
+    }
+    _seedFields(controller);
   }
 
   @override
   void dispose() {
+    _controller?.removeListener(_handleSettingsChanged);
     _debounce?.cancel();
     _baseUrl.dispose();
     _apiKey.dispose();
@@ -51,6 +56,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _systemPrompt.dispose();
     super.dispose();
   }
+
+  void _handleSettingsChanged() {
+    final controller = _controller;
+    if (controller != null) _seedFields(controller);
+  }
+
+  /// Seeds the text fields once the stored settings finish loading.
+  ///
+  /// The screen is built eagerly (inside the shell's `IndexedStack`) on the
+  /// first frame, before `SettingsController.load()` completes. Seeding from
+  /// the defaults back then would make a later commit overwrite the user's
+  /// saved endpoint, key and models with those defaults.
+  void _seedFields(SettingsController controller) {
+    if (_seeded || !controller.isLoaded) return;
+    _seeded = true;
+    _applyToFields(controller.settings);
+  }
+
+  AppSettings _mergedWithFields(AppSettings base) => base.copyWith(
+        baseUrl: _baseUrl.text.trim(),
+        apiKey: _apiKey.text.trim(),
+        chatModel: _chatModel.text.trim(),
+        embeddingModel: _embeddingModel.text.trim(),
+        systemPrompt: _systemPrompt.text,
+      );
 
   void _applyToFields(AppSettings settings) {
     _baseUrl.text = settings.baseUrl;
@@ -66,21 +96,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _commit() async {
-    final controller = context.read<SettingsController>();
-    await controller.update(
-      controller.settings.copyWith(
-        baseUrl: _baseUrl.text.trim(),
-        apiKey: _apiKey.text.trim(),
-        chatModel: _chatModel.text.trim(),
-        embeddingModel: _embeddingModel.text.trim(),
-        systemPrompt: _systemPrompt.text,
-      ),
-    );
+    final controller = _controller;
+    if (controller == null || !controller.isLoaded) return;
+    await controller.update(_mergedWithFields(controller.settings));
   }
 
   Future<void> _commitNow(AppSettings next) async {
     _debounce?.cancel();
-    await context.read<SettingsController>().update(next);
+    final controller = _controller;
+    if (controller == null || !controller.isLoaded) return;
+    await controller.update(_mergedWithFields(next));
   }
 
   Future<void> _test() async {
@@ -102,7 +127,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final settings = context.watch<SettingsController>().settings;
+    final controller = context.watch<SettingsController>();
+    if (!controller.isLoaded) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.settingsTitle)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final settings = controller.settings;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
@@ -374,13 +406,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _applyPreset(AppSettings preset) async {
-    final controller = context.read<SettingsController>();
-    final next = controller.settings.copyWith(
+    final controller = _controller;
+    if (controller == null || !controller.isLoaded) return;
+    final next = _mergedWithFields(controller.settings).copyWith(
       baseUrl: preset.baseUrl,
       chatModel: preset.chatModel,
       embeddingModel: preset.embeddingModel,
     );
-    _applyToFields(next);
+    _baseUrl.text = next.baseUrl;
+    _chatModel.text = next.chatModel;
+    _embeddingModel.text = next.embeddingModel;
     setState(() {});
     await _commitNow(next);
   }
