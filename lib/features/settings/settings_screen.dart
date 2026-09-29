@@ -10,7 +10,7 @@ import '../chat/chat_controller.dart';
 import '../documents/documents_controller.dart';
 import 'settings_controller.dart';
 
-const String kAppVersion = '1.0.1';
+const String kAppVersion = '1.0.2';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
